@@ -6,8 +6,8 @@ test('Успешная авторизация', async ({ page }) => {
   await page.goto('https://netology.ru');
   await page.click('text="Войти"');
 
-  await page.fill('input[type=email]', USER_EMAIL);
   await page.fill('[name="password"]', USER_PASSWORD);
+  await page.fill('input[type=email]', USER_EMAIL);
 
   // Нажимаем кнопку "Войти" еще раз
   await Promise.all([
@@ -16,26 +16,32 @@ test('Успешная авторизация', async ({ page }) => {
   ]);
 
   // Проверяем, что открылась страница профиля
-  await expect(page).toHaveURL(/\/profile$/);
+  await expect(page).toHaveURL(/\/profile(\/\d+)?$/, { timeout: 10000 });
+
+  // Вывод текущего URL для отладки
+  console.log('Current URL:', page.url());
+
+  // Снимок экрана для отладки
+  await page.screenshot({ path: 'profile_page.png' });
 
   // Проверяем, что заголовок страницы профиля присутствует
-  await expect(page).toHaveText('h2', 'Личный кабинет');
+  await expect(page.locator('h2')).toHaveText('Моё обучение', { timeout: 10000 });
 });
+
+
 
 test('Неуспешная авторизация', async ({ page }) => {
   // Открываем страницу и нажимаем кнопку "Войти"
   await page.goto('https://netology.ru');
   await page.click('text="Войти"');
 
-  await page.fill('input[type=email]', 'invalid_email@example.com');
-  await page.fill('[name="password"]', 'invalid_password');
+  // Вводим неверный пароль
+  await page.fill('[name="password"]', 'wrong-password');
+  await page.fill('input[type=email]', USER_EMAIL);
 
-  // Нажимаем кнопку "Войти" еще раз
-  await Promise.all([
-    page.waitForResponse(response => response.url().includes('/auth/login') && response.status() === 200),
-    page.click('button:has-text("Войти")'),
-  ]);
+  // Нажимаем кнопку "Войти"
+  await page.click('button:has-text("Войти")');
 
-  // Проверяем, что появился блок с текстом об ошибке
-  await expect(page).toHaveText('[data-testid="login-error-hint"]', 'Вы ввели неправильно логин или пароль');
+  // Ожидание появления элемента с текстом сообщения об ошибке
+  await expect(page.locator('text=Вы ввели неправильно логин или пароль')).toBeVisible({ timeout: 10000 });
 });
